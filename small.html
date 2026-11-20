@@ -69,7 +69,7 @@
 <body class="clean">
 <div class="wrap">
   <header>
-    <div id="examTitle">Test</div>
+    <div id="examTitle">SAC Name</div>
   </header>
 
   <section class="center">
@@ -85,7 +85,7 @@
   <footer>
     <div class="keys"><kbd>S</kbd> setup · <kbd>N</kbd> start now · <kbd>⌘F</kbd>/<kbd>Ctrl+F</kbd> full screen · <a href="./">Exam room (with toilet signs)</a></div>
     <div>
-      <button id="btnSetup">Test setup</button>
+      <button id="btnSetup">Assessment Setup</button>
       <button id="btnFull" title="Cmd+F / Ctrl+F">Full screen</button>
     </div>
   </footer>
@@ -93,8 +93,8 @@
 
 <div class="modal" id="setup">
   <div class="card">
-    <h2>Test setup</h2>
-    <label>Title</label>
+    <h2>Assessment Setup</h2>
+    <label>SAC name</label>
     <input id="inTitle" placeholder="Year 12 Software Development — SAC 2">
     <label>Start time (reading time starts, or writing if no reading)</label>
     <div class="startrow">
@@ -133,7 +133,7 @@
   // First use on this laptop: suggest the next 5-minute mark, and open setup straight away.
   const nextFive = () => { const d = new Date(Date.now() + 5*60000); d.setMinutes(Math.ceil(d.getMinutes()/5)*5, 0, 0); return hm(d); };
   const saved = store.get(null);
-  let cfg = saved || { title:'Test', start: nextFive(), read:0, write:50, warn:10, light:false };
+  let cfg = saved || { title:'SAC Name', start: nextFive(), read:0, write:50, warn:10, light:false };
 
   function times(){
     const [h,m] = (cfg.start||'00:00').split(':').map(Number);
@@ -145,7 +145,7 @@
 
   function render(){
     const {s,w,e} = times();
-    $('examTitle').textContent = cfg.title || 'Test';
+    $('examTitle').textContent = cfg.title || 'SAC Name';
     $('vRead').textContent  = hm(s)+' – '+hm(w);
     $('vWrite').textContent = hm(w)+' – '+hm(e);
     $('tbRead').classList.toggle('hidden', !(cfg.read > 0));
@@ -190,7 +190,7 @@
   function closeSetup(){ $('setup').classList.remove('open'); }
   function save(){
     cfg = {
-      title: $('inTitle').value.trim() || 'Test',
+      title: $('inTitle').value.trim() || 'SAC Name',
       start: $('inStart').value || nowHM(),
       read:  Math.max(0, parseInt($('inRead').value)  || 0),
       write: Math.max(1, parseInt($('inWrite').value) || 50),
