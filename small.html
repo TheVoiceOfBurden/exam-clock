@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Clock — Small Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Small room / SAC mode: clock, phase, reading + writing times and the warning. No toilet signs. */
+  :root{
+    --bg:#0b0e13; --panel:#141922; --line:#232a36; --ink:#e8edf5; --mute:#7b8698;
+    --warn:#ffb020; --warn-bg:rgba(255,176,32,.08); --field:#0d1117; --btn:#1f2633; --active-bg:rgba(255,255,255,.04);
+  }
+  body.light{
+    --bg:#f5f6f8; --panel:#ffffff; --line:#d5dae2; --ink:#10151d; --mute:#5f6b7c;
+    --warn:#b45309; --warn-bg:rgba(245,158,11,.12); --field:#f5f6f8; --btn:#e9edf2; --active-bg:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  body{transition:background .3s ease,color .3s ease}
+  .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding:3vh 4vw;gap:2vh}
+  header{display:flex;justify-content:center;align-items:baseline}
+  #examTitle{font-size:clamp(20px,3.6vw,56px);font-weight:800;letter-spacing:.01em;text-align:center}
+  .center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.5vh}
+  #phase{font-size:clamp(16px,2.4vw,38px);color:var(--mute);text-transform:uppercase;letter-spacing:.2em;text-align:center}
+  #phase.live{color:var(--ink)}
+  #clock{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:clamp(64px,min(16vw,28vh),340px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .times{display:flex;gap:3vw;justify-content:center;margin-top:1vh}
+  .tb{border:2px solid var(--line);border-radius:18px;padding:1.6vh 2.8vw;text-align:center;opacity:.7;transition:all .3s ease}
+  .tb.active{opacity:1;border-color:var(--ink);background:var(--active-bg)}
+  .tb.done{opacity:.35}
+  .tb .k{font-size:clamp(13px,1.7vw,28px);font-weight:800;letter-spacing:.25em;color:var(--mute)}
+  .tb.active .k{color:var(--ink)}
+  .tb .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:clamp(28px,min(5vw,9vh),104px);font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
+  .tb.hidden{display:none}
+  #warnMsg{margin-top:1.5vh;padding:1.2vh 2.8vw;border-radius:14px;border:2px solid var(--warn);color:var(--warn);
+    background:var(--warn-bg);font-weight:800;letter-spacing:.2em;text-transform:uppercase;text-align:center;
+    font-size:clamp(16px,min(2.6vw,4.5vh),52px);visibility:hidden}
+  #warnMsg.show{visibility:visible}
+
+  footer{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--mute);font-size:clamp(10px,1vw,14px)}
+  footer button{background:none;border:1px solid var(--line);color:var(--mute);padding:.5em .9em;border-radius:8px;font:inherit;cursor:pointer}
+  footer button:hover{color:var(--ink);border-color:var(--mute)}
+  footer a{color:var(--mute)}
+  .keys kbd{font-family:'JetBrains Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:0 .35em;margin:0 .15em}
+  body.clean footer{opacity:0;transition:opacity .4s}
+  body.clean footer:hover{opacity:1}
+  body.is-full footer{display:none}
+  body.nocursor, body.nocursor *{cursor:none !important}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;width:min(520px,92vw);max-height:86vh;overflow:auto}
+  .card h2{font-size:18px;margin-bottom:14px}
+  .card label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  .card input{width:100%;background:var(--field);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 10px;font:inherit}
+  .card label.switch{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:14px}
+  .card .switch input{width:auto;transform:scale(1.4);accent-color:var(--ink)}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .startrow{display:flex;gap:8px;align-items:center}
+  .startrow input{flex:1}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .actions button,.startrow button{background:var(--btn);border:1px solid var(--line);color:var(--ink);padding:9px 14px;border-radius:8px;font:inherit;cursor:pointer;white-space:nowrap}
+  .actions button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  .hint{font-size:12px;color:var(--mute);margin-top:6px}
+</style>
+</head>
+<body class="clean">
+<div class="wrap">
+  <header>
+    <div id="examTitle">Test</div>
+  </header>
+
+  <section class="center">
+    <div id="phase">Not yet started</div>
+    <div id="clock">--:--:--</div>
+    <div class="times">
+      <div class="tb" id="tbRead"><div class="k">READING</div><div class="v" id="vRead"></div></div>
+      <div class="tb" id="tbWrite"><div class="k">WRITING</div><div class="v" id="vWrite"></div></div>
+    </div>
+    <div id="warnMsg"></div>
+  </section>
+
+  <footer>
+    <div class="keys"><kbd>S</kbd> setup · <kbd>N</kbd> start now · <kbd>⌘F</kbd>/<kbd>Ctrl+F</kbd> full screen · <a href="./">Exam room (with toilet signs)</a></div>
+    <div>
+      <button id="btnSetup">Test setup</button>
+      <button id="btnFull" title="Cmd+F / Ctrl+F">Full screen</button>
+    </div>
+  </footer>
+</div>
+
+<div class="modal" id="setup">
+  <div class="card">
+    <h2>Test setup</h2>
+    <label>Title</label>
+    <input id="inTitle" placeholder="Year 12 Software Development — SAC 2">
+    <label>Start time (reading time starts, or writing if no reading)</label>
+    <div class="startrow">
+      <input id="inStart" type="time">
+      <button id="btnNow" type="button">Start now</button>
+    </div>
+    <div class="row">
+      <div><label>Reading (min)</label><input id="inRead" type="number" min="0" step="1"></div>
+      <div><label>Writing (min)</label><input id="inWrite" type="number" min="1" step="1"></div>
+      <div><label>Warning (min)</label><input id="inWarn" type="number" min="0" step="1"></div>
+    </div>
+    <p class="hint">Warning: shown this many minutes before writing ends, counting down. 0 turns it off.</p>
+    <label class="switch">Light mode <input id="inLight" type="checkbox"></label>
+    <div class="actions">
+      <button id="btnCancel">Cancel</button>
+      <button class="primary" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  // Own storage key, so small-room settings never overwrite the exam-room settings on a shared laptop.
+  const KEY = 'smallcfg';
+  const store = {
+    get(d){ try{ const v = localStorage.getItem(KEY); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} }
+  };
+
+  const pad = n => String(n).padStart(2,'0');
+  const hms = d => pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  const hm  = d => pad(d.getHours())+':'+pad(d.getMinutes());
+  const nowHM = () => hm(new Date());
+
+  // First use on this laptop: suggest the next 5-minute mark, and open setup straight away.
+  const nextFive = () => { const d = new Date(Date.now() + 5*60000); d.setMinutes(Math.ceil(d.getMinutes()/5)*5, 0, 0); return hm(d); };
+  const saved = store.get(null);
+  let cfg = saved || { title:'Test', start: nextFive(), read:0, write:50, warn:10, light:false };
+
+  function times(){
+    const [h,m] = (cfg.start||'00:00').split(':').map(Number);
+    const s = new Date(); s.setHours(h,m,0,0);
+    const w = new Date(s.getTime() + cfg.read*60000);
+    const e = new Date(w.getTime() + cfg.write*60000);
+    return {s,w,e};
+  }
+
+  function render(){
+    const {s,w,e} = times();
+    $('examTitle').textContent = cfg.title || 'Test';
+    $('vRead').textContent  = hm(s)+' – '+hm(w);
+    $('vWrite').textContent = hm(w)+' – '+hm(e);
+    $('tbRead').classList.toggle('hidden', !(cfg.read > 0));
+    document.body.classList.toggle('light', !!cfg.light);
+  }
+
+  function tick(){
+    const n = new Date();
+    $('clock').textContent = hms(n);
+    const {s,w,e} = times();
+    let phase, live = false;
+    if (n < s) phase = 'Not yet started';
+    else if (n < w){ phase = 'Reading time — no writing'; live = true; }
+    else if (n < e){ phase = 'Writing time'; live = true; }
+    else phase = 'Finished — pens down';
+    $('phase').textContent = phase;
+    $('phase').classList.toggle('live', live);
+    $('tbRead').classList.toggle('active', n>=s && n<w);
+    $('tbRead').classList.toggle('done', n>=w);
+    $('tbWrite').classList.toggle('active', n>=w && n<e);
+    $('tbWrite').classList.toggle('done', n>=e);
+
+    const wm = cfg.warn ?? 10;
+    const msg = $('warnMsg');
+    if (n >= e){
+      msg.textContent = 'Finished — pens down';
+      msg.classList.add('show');
+    } else {
+      const left = Math.max(1, Math.ceil((e - n)/60000));
+      msg.textContent = left + (left===1 ? ' minute' : ' minutes') + ' of writing time remaining';
+      msg.classList.toggle('show', wm > 0 && n >= w && (e - n) <= wm*60000);
+    }
+  }
+
+  // ---- setup ----
+  function openSetup(){
+    $('inTitle').value = cfg.title; $('inStart').value = cfg.start;
+    $('inRead').value = cfg.read; $('inWrite').value = cfg.write; $('inWarn').value = (cfg.warn ?? 10);
+    $('inLight').checked = !!cfg.light;
+    $('setup').classList.add('open');
+  }
+  function closeSetup(){ $('setup').classList.remove('open'); }
+  function save(){
+    cfg = {
+      title: $('inTitle').value.trim() || 'Test',
+      start: $('inStart').value || nowHM(),
+      read:  Math.max(0, parseInt($('inRead').value)  || 0),
+      write: Math.max(1, parseInt($('inWrite').value) || 50),
+      warn:  Math.max(0, parseInt($('inWarn').value)  || 0),
+      light: $('inLight').checked
+    };
+    store.set(cfg); closeSetup(); render(); tick();
+  }
+  // Start now: begin at the current minute (for tests that start when the room is ready).
+  function startNow(){
+    cfg.start = nowHM(); store.set(cfg); render(); tick();
+  }
+  $('btnSetup').onclick = openSetup;
+  $('btnCancel').onclick = closeSetup;
+  $('btnSave').onclick = save;
+  $('btnNow').onclick = ()=>{ $('inStart').value = nowHM(); };
+
+  // ---- full screen ----
+  function toggleFullscreen(){
+    try{
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen({ navigationUI:'hide' }).catch(()=>{});
+      else document.exitFullscreen().catch(()=>{});
+    }catch(e){}
+  }
+  $('btnFull').onclick = toggleFullscreen;
+  let cursorTimer = null;
+  function wakeCursor(){
+    document.body.classList.remove('nocursor');
+    clearTimeout(cursorTimer);
+    if (document.fullscreenElement) cursorTimer = setTimeout(()=>document.body.classList.add('nocursor'), 2000);
+  }
+  document.addEventListener('mousemove', wakeCursor);
+  document.addEventListener('fullscreenchange', ()=>{
+    document.body.classList.toggle('is-full', !!document.fullscreenElement);
+    $('btnFull').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+    wakeCursor();
+  });
+
+  // ---- keys ----
+  document.addEventListener('keydown', ev=>{
+    if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'f'){
+      ev.preventDefault(); toggleFullscreen(); return;
+    }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === 'Enter' && $('setup').classList.contains('open')){ ev.preventDefault(); save(); return; }
+    if (ev.key === 'Escape'){ closeSetup(); return; }
+    if (ev.target.tagName === 'INPUT') return;
+    const k = ev.key.toLowerCase();
+    if (k === 's') openSetup();
+    else if (k === 'n') startNow();
+  });
+
+  render(); tick();
+  setInterval(tick, 250);
+  if (!saved) openSetup();
+})();
+</script>
+</body>
+</html>

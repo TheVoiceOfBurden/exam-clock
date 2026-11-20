@@ -9,6 +9,16 @@ An exam supervision clock for the projector, with plane-style toilet availabilit
 
 Live site: `https://thevoiceofburden.github.io/exam-clock/`
 
+### Room types
+
+| Room | Page | For |
+| --- | --- | --- |
+| Exam room | [`index.html`](https://thevoiceofburden.github.io/exam-clock/) | Large exams: clock, times, warning, toilet signs with phone remote |
+| Small room | [`small.html`](https://thevoiceofburden.github.io/exam-clock/small.html) | SACs and tests up to about 30 students: clock, phase, times and warning only. No toilet signs, no Firebase |
+| Special provisions | planned ([issue #1](https://github.com/TheVoiceOfBurden/exam-clock/issues/1)) | Individual finish times, rest breaks and extra time |
+
+The small room has its own settings, so it never changes the exam room's settings on a shared laptop. Keys: `S` setup · `N` start now · `Cmd+F` / `Ctrl+F` full screen.
+
 ---
 
 ## Using it
@@ -63,7 +73,8 @@ Open `https://thevoiceofburden.github.io/exam-clock/check.html` on a school lapt
 ## Files
 
 ```
-index.html             Display (projector)
+index.html             Display (projector), exam room
+small.html             Display, small room / SAC (no toilet signs)
 remote.html            Phone remote
 check.html             Network check
 js/firebase-config.js  Your Firebase project config
