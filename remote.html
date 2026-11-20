@@ -7,7 +7,7 @@
 <title>Toilet Remote — Exam Clock</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#0b0e13; --line:#232a36; --ink:#e8edf5; --mute:#7b8698; --vacant:#3ddc84; }
+  :root{ --bg:#0b0e13; --line:#232a36; --ink:#e8edf5; --mute:#7b8698; --vacant:#4cc3ff; }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
   main{min-height:100vh;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -27,10 +27,10 @@
   .rb .nm{font-size:15px;letter-spacing:.15em;color:#aab3c2;font-weight:700}
   .rb .st{font-size:24px;font-weight:800;letter-spacing:.2em}
   .rb .hint{font-size:13px;color:#aab3c2}
-  .rb.vacant{border-color:#2f7a4f}
-  .rb.vacant .fig{fill:var(--vacant)} .rb.vacant .st{color:var(--vacant)}
-  .rb.occ{background:radial-gradient(ellipse at 50% 45%,#5a3500,#2a1800 75%);border-color:#b8740c;box-shadow:0 0 24px rgba(255,140,20,.35)}
-  .rb.occ .fig{fill:#ffd27a} .rb.occ .st{color:#ffe1a0}
+  .rb.vacant{border-color:#1f4a63}
+  .rb.vacant .fig{fill:transparent;stroke:var(--vacant);stroke-width:2.5;stroke-linejoin:round} .rb.vacant .st{color:var(--vacant)}
+  .rb.occ{background:radial-gradient(ellipse at 50% 45%,#ffd36a,#f59e0b 80%);border-color:#ffd36a;box-shadow:0 0 24px rgba(255,160,20,.45)}
+  .rb.occ .fig{fill:#2a1600} .rb.occ .st,.rb.occ .nm,.rb.occ .hint{color:#2a1600}
   .rb.closed{background:linear-gradient(#1d1416,#120c0d);border-color:#5a1f24}
   .rb.closed .fig{fill:#4a3336} .rb.closed .st{color:#ff5a5f}
   .rb.wait{opacity:.6}
