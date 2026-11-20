@@ -1,0 +1,33 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        // Anyone signed in (anonymously) who knows the room id can read it.
+        // Room ids are long and random and are never listed, so the id acts as the key.
+        ".read": "auth != null",
+        // Only the display that created the room may create, change or delete it as a whole.
+        ".write": "auth != null && (!data.exists() || data.child('owner').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['owner', 'endAt', 'closeAt', 'M', 'F'])",
+        "owner":   { ".validate": "newData.isString() && (data.exists() ? newData.val() === data.val() : newData.val() === auth.uid)" },
+        "title":   { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "created": { ".validate": "newData.isNumber()" },
+        "endAt":   { ".validate": "newData.isNumber()" },
+        "closeAt": { ".validate": "newData.isNumber() && newData.val() <= newData.parent().child('endAt').val()" },
+        // Staff phones may only flip the two signs.
+        // Marking a student OUT is refused by the server once closeAt has passed (final 15 minutes);
+        // marking a student BACK is always allowed.
+        "M": {
+          ".write": "auth != null && data.exists() && (newData.val() === false || now < data.parent().child('closeAt').val())",
+          ".validate": "newData.isBoolean()"
+        },
+        "F": {
+          ".write": "auth != null && data.exists() && (newData.val() === false || now < data.parent().child('closeAt').val())",
+          ".validate": "newData.isBoolean()"
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

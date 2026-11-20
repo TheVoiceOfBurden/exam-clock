@@ -1,0 +1,19 @@
+# macOS / Windows junk
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+
+# Firebase CLI (if you use it later)
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# Secrets — never commit
+.env
+*.key
+serviceAccount*.json
+
+# Node (only if tooling is added)
+node_modules/

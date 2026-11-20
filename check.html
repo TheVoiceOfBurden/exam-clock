@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Clock — Network check</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0b0e13;color:#e8edf5;display:grid;place-items:center;min-height:100vh;margin:0}
+  .card{max-width:460px;padding:28px;border:1px solid #232a36;border-radius:14px;background:#141922}
+  h1{font-size:20px;margin:0 0 14px} li{margin:8px 0;list-style:none} .ok{color:#3ddc84} .bad{color:#ff5a5f} .wait{color:#7b8698}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Network check</h1>
+  <ul id="list"></ul>
+  <p style="color:#7b8698;font-size:13px">Run this on the school network, on both a laptop and a staff phone, before exam day.</p>
+</div>
+<script type="module">
+import { configured, connect } from './js/firebase.js';
+const list = document.getElementById('list');
+const row = (t) => { const li = document.createElement('li'); li.className = 'wait'; li.textContent = '… ' + t; list.appendChild(li); return li; };
+const done = (li, ok, t) => { li.className = ok ? 'ok' : 'bad'; li.textContent = (ok ? '✔ ' : '✘ ') + t; };
+
+const a = row('Firebase config present');
+if (!configured) { done(a, false, 'Firebase config missing — edit js/firebase-config.js'); }
+else {
+  done(a, true, 'Firebase config present');
+  const b = row('Loading Firebase and signing in');
+  try {
+    const fb = await connect();
+    done(b, true, 'Firebase loaded and signed in');
+    const c = row('Connecting to the realtime database');
+    const t = setTimeout(() => done(c, false, 'Database blocked or unreachable on this network'), 10000);
+    fb.onValue(fb.ref(fb.db, '.info/connected'), s => { if (s.val()) { clearTimeout(t); done(c, true, 'Realtime database reachable — remote will work here'); } });
+  } catch (err) { done(b, false, 'Could not load Firebase or sign in: ' + err.message); }
+}
+</script>
+</body>
+</html>
