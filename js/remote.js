@@ -68,7 +68,7 @@ function setConn(ok, text) {
     room = s.val();
     if (!room) { render('This remote session has ended. Scan the new code on the display.'); return; }
     render();
-  }, err => { console.warn(err); setConn(false, 'No access'); render('This remote session is not available.'); });
+  }, err => { console.warn(err); setConn(false, 'No access'); render('Access refused by the database (' + (err && (err.code || err.message) || 'unknown') + '). Check the Realtime Database rules are published. Room: ' + roomId); });
 
   $('rbM').onclick = () => tap('M');
   $('rbF').onclick = () => tap('F');

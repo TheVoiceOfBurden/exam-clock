@@ -90,7 +90,7 @@ async function start() {
   } catch (err) {
     console.warn(err);
     roomId = null;
-    render('Could not start the remote — check the database rules are published.');
+    render('Could not start the remote (' + (err && (err.code || err.message) || 'error') + ') — check the database rules are published.');
     return;
   }
   store.set(roomId);
