@@ -15,7 +15,9 @@ Live site: `https://thevoiceofburden.github.io/exam-clock/`
 | --- | --- | --- |
 | Exam room | [`index.html`](https://thevoiceofburden.github.io/exam-clock/) | Large exams: clock, times, warning, toilet signs with phone remote |
 | Small room | [`small.html`](https://thevoiceofburden.github.io/exam-clock/small.html) | SACs and tests up to about 30 students: clock, phase, times and warning only. No toilet signs, no Firebase |
-| Special provisions | planned ([issue #1](https://github.com/TheVoiceOfBurden/exam-clock/issues/1)) | Individual finish times, rest breaks and extra time |
+| Special provisions | [`provisions.html`](https://thevoiceofburden.github.io/exam-clock/provisions.html) + [`hud.html`](https://thevoiceofburden.github.io/exam-clock/hud.html) | Each student's own finish time with extra reading/writing time and rest breaks, run from a control HUD on the laptop screen |
+
+**Special provisions:** open `provisions.html` on the projector and press **S → Open control HUD** (or **H**). The HUD opens in a second window: keep it on the laptop screen with the display set to *Extend*. Import the student list as CSV ([template](templates/special-provisions-template.csv)): `id` is required; `name` shows only in the HUD; `display` (e.g. initials) is what the projector shows; `extra_reading`, `extra_writing` and `rest` are minutes. A rest break pauses that student's clock, so their finish time moves later by the length of the break. `−1` / `+1` adjust a student's time, `Finish` marks them done, and the log (with a per-student summary) can be copied for the exam record. Student details stay in that browser only; clear the list after the exam.
 
 The small room has its own settings, so it never changes the exam room's settings on a shared laptop. Keys: `S` setup · `N` start now · `Cmd+F` / `Ctrl+F` full screen.
 
@@ -75,6 +77,10 @@ Open `https://thevoiceofburden.github.io/exam-clock/check.html` on a school lapt
 ```
 index.html             Display (projector), exam room
 small.html             Display, small room / SAC (no toilet signs)
+provisions.html        Display, special provisions room (projector)
+hud.html               Special provisions control HUD (laptop screen)
+js/sp-core.js          Special provisions timing rules, CSV import and validation
+templates/             CSV template for the student list
 remote.html            Phone remote
 check.html             Network check
 js/firebase-config.js  Your Firebase project config

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control HUD — Special Provisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Supervisor control screen for the special provisions room. Not for the projector. */
+  :root{
+    --bg:#0b0e13; --panel:#141922; --line:#232a36; --ink:#e8edf5; --mute:#7b8698;
+    --warn:#ffb020; --rest:#4cc3ff; --bad:#ff5a5f; --field:#0d1117; --btn:#1f2633; --row:#10151c;
+  }
+  body.light{
+    --bg:#f5f6f8; --panel:#ffffff; --line:#d5dae2; --ink:#10151d; --mute:#5f6b7c;
+    --warn:#b45309; --rest:#0369a1; --bad:#b91c1c; --field:#f5f6f8; --btn:#e9edf2; --row:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px}
+  main{max-width:1280px;margin:0 auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:14px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  h1{font-size:22px;font-weight:800}
+  .sub{color:var(--mute);font-size:13px;margin-top:4px}
+  .sub a{color:var(--mute)}
+  #clock{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:40px;font-variant-numeric:tabular-nums}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button,.btn{background:var(--btn);border:1px solid var(--line);color:var(--ink);padding:8px 12px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+  button:hover,.btn:hover{border-color:var(--mute)}
+  button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  button.danger{border-color:var(--bad);color:var(--bad)}
+  button.rest-on{background:var(--rest);border-color:var(--rest);color:#04131c;font-weight:700}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  input[type=file]{display:none}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:none}
+  .panel.open{display:block}
+  .panel h3{font-size:15px;margin-bottom:8px}
+  textarea,input.f{width:100%;background:var(--field);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit}
+  textarea{font-family:'JetBrains Mono',monospace;font-size:13px;min-height:120px}
+  .grid6{display:grid;grid-template-columns:1fr 2fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end}
+  .grid6 label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
+  .hint{font-size:12px;color:var(--mute);line-height:1.5}
+  #msg{font-size:13px;line-height:1.6;white-space:pre-wrap;display:none;border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
+  #msg.ok{display:block;border-color:var(--rest)}
+  #msg.bad{display:block;border-color:var(--bad)}
+
+  table{width:100%;border-collapse:separate;border-spacing:0 6px}
+  th{font-size:12px;color:var(--mute);text-align:left;font-weight:600;padding:0 10px;letter-spacing:.04em;text-transform:uppercase}
+  td{background:var(--row);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px;vertical-align:middle}
+  td:first-child{border-left:1px solid var(--line);border-radius:10px 0 0 10px}
+  td:last-child{border-right:1px solid var(--line);border-radius:0 10px 10px 0}
+  .nm{font-weight:700}
+  .id{font-size:12px;color:var(--mute)}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .t{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700}
+  .pill{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .pill.reading{border-style:dashed;border-color:var(--ink)}
+  .pill.writing{border-color:var(--ink)}
+  .pill.rest{background:var(--rest);border-color:var(--rest);color:#04131c}
+  .pill.warning{background:#f59e0b;border-color:#f59e0b;color:#2a1600}
+  .pill.done{opacity:.5}
+  .over{color:var(--bad);font-weight:700}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .acts button{padding:6px 10px;font-size:13px}
+  tr.done td{opacity:.55}
+  #empty{color:var(--mute);text-align:center;padding:30px;border:1px dashed var(--line);border-radius:12px}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;width:min(640px,92vw);max-height:86vh;overflow:auto}
+  .mcard h2{font-size:18px;margin-bottom:12px}
+  #logList{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:60px}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title">Special Provisions</h1>
+      <div class="sub" id="base"></div>
+      <div class="sub">Control HUD — keep this on the laptop screen. Change the standard times in <b>Assessment Setup</b> on the projector page.</div>
+    </div>
+    <div id="clock">--:--:--</div>
+  </header>
+
+  <div class="bar">
+    <label class="btn" for="file">Import CSV file</label><input id="file" type="file" accept=".csv,text/csv,text/plain">
+    <button id="btnPaste">Paste CSV</button>
+    <button id="btnAdd">Add student</button>
+    <button id="btnTemplate">Download template</button>
+    <span style="flex:1"></span>
+    <button id="btnLog">Log</button>
+    <button id="btnClear" class="danger">Clear all students</button>
+  </div>
+
+  <div class="panel" id="pastePanel">
+    <h3>Paste CSV</h3>
+    <textarea id="csvText" placeholder="id,name,display,extra_reading,extra_writing,rest&#10;1001,Example Student,ES,5,20,10"></textarea>
+    <div class="bar" style="margin-top:8px">
+      <button class="primary" id="btnImportText">Import</button>
+      <span class="hint">Columns: <b>id</b> (required), name, display (shown on the projector), extra_reading, extra_writing, rest — minutes.</span>
+    </div>
+  </div>
+
+  <div class="panel" id="addPanel">
+    <h3>Add student</h3>
+    <div class="grid6">
+      <div><label>ID *</label><input class="f" id="aId"></div>
+      <div><label>Name (HUD only)</label><input class="f" id="aName"></div>
+      <div><label>Projector label</label><input class="f" id="aDisp" placeholder="e.g. initials"></div>
+      <div><label>Extra reading</label><input class="f" id="aXr" type="number" min="0" value="0"></div>
+      <div><label>Extra writing</label><input class="f" id="aXw" type="number" min="0" value="0"></div>
+      <div><label>Rest allowed</label><input class="f" id="aRest" type="number" min="0" value="0"></div>
+      <div><button class="primary" id="btnAddSave">Add</button></div>
+    </div>
+  </div>
+
+  <div class="bar" id="importMode" style="display:none">
+    <span class="hint">When importing into an existing list:</span>
+    <label class="hint"><input type="radio" name="mode" value="replace" checked> replace the list</label>
+    <label class="hint"><input type="radio" name="mode" value="add"> add to the list</label>
+  </div>
+
+  <div id="msg"></div>
+
+  <div id="tableWrap"></div>
+</main>
+
+<div class="modal" id="log">
+  <div class="mcard">
+    <h2>Special provisions log</h2>
+    <div id="logList"></div>
+    <div class="actions">
+      <button id="btnClearLog">Clear</button>
+      <button id="btnCopyLog">Copy</button>
+      <button class="primary" id="btnCloseLog">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/sp-core.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let cfg = SP.loadCfg() || SP.defaultCfg();
+
+  // Every change: load the latest state, change it, save it, log it.
+  function mutate(fn){
+    const st = SP.loadState();
+    const line = fn(st, Date.now());
+    if (line) st.log.push(SP.hms(new Date()) + '  ' + line);
+    SP.saveState(st);
+    build();
+  }
+  const who = s => (s.display && s.display !== s.id ? s.display + ' (' + s.id + ')' : s.id);
+
+  function message(text, ok){
+    const m = $('msg');
+    m.textContent = text;
+    m.className = text ? (ok ? 'ok' : 'bad') : '';
+  }
+
+  // ---------- table ----------
+  let builtRev = -1;
+  function build(){
+    const st = SP.loadState();
+    builtRev = st.rev;
+    $('importMode').style.display = st.students.length ? 'flex' : 'none';
+    if (!st.students.length){
+      $('tableWrap').innerHTML = '<div id="empty">No students yet. Import a CSV file, paste a list, or add students one at a time.</div>';
+      return;
+    }
+    const rows = st.students.map((s, i) => `
+      <tr data-i="${i}">
+        <td><div class="nm">${esc(s.name || s.display || s.id)}</div><div class="id">ID ${esc(s.id)} · projector: ${esc(s.display || s.id)}</div></td>
+        <td class="mono">${s.xr ? '+' + s.xr : '—'} / ${s.xw ? '+' + s.xw : '—'}${s.adj ? ` <span class="id">(adj ${s.adj > 0 ? '+' : ''}${s.adj})</span>` : ''}</td>
+        <td><span class="pill" data-k="pill"></span></td>
+        <td class="t" data-k="read"></td>
+        <td class="t" data-k="fin"></td>
+        <td class="mono" data-k="rest"></td>
+        <td><div class="acts">
+          <button data-a="rest">Start rest</button>
+          <button data-a="minus" title="Take 1 minute off">−1</button>
+          <button data-a="plus" title="Add 1 minute">+1</button>
+          <button data-a="finish">Finish</button>
+          <button data-a="remove" title="Remove from list">✕</button>
+        </div></td>
+      </tr>`).join('');
+    $('tableWrap').innerHTML = `<table>
+      <thead><tr><th>Student</th><th>Extra (min) R / W</th><th>Status</th><th>Reading ends</th><th>Finishes</th><th>Rest used / allowed</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+    tick();
+  }
+
+  const LABEL = { pending:'Not started', reading:'Reading', writing:'Writing', warning:'Warning', rest:'Rest break', done:'Finished' };
+  function tick(){
+    const now = Date.now();
+    $('clock').textContent = SP.hms(new Date(now));
+    const st = SP.loadState();
+    if (st.rev !== builtRev) { build(); return; }
+    document.querySelectorAll('tbody tr').forEach(tr => {
+      const s = st.students[+tr.dataset.i]; if (!s) return;
+      const c = SP.compute(cfg, s, now);
+      const pill = tr.querySelector('[data-k=pill]');
+      pill.className = 'pill ' + c.phase;
+      pill.textContent = c.phase === 'warning' ? Math.max(1, Math.ceil(c.leftMs / SP.MIN)) + ' min left' : LABEL[c.phase];
+      tr.className = c.phase === 'done' ? 'done' : '';
+      tr.querySelector('[data-k=read]').textContent = (cfg.read + s.xr) > 0 ? SP.hm(c.readEnd) : '—';
+      tr.querySelector('[data-k=fin]').textContent = SP.hm(c.finish);
+      tr.querySelector('[data-k=rest]').innerHTML =
+        `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rest ? s.rest + ':00' : '—'}${c.restOver ? ' <span class="over">over</span>' : ''}`;
+      const rb = tr.querySelector('[data-a=rest]');
+      const on = c.phase === 'rest';
+      rb.textContent = on ? 'End rest' : 'Start rest';
+      rb.className = on ? 'rest-on' : '';
+      rb.disabled = !!s.finishedAt;
+      tr.querySelector('[data-a=finish]').textContent = s.finishedAt ? 'Undo finish' : 'Finish';
+    });
+  }
+
+  // ---------- row actions ----------
+  let removeArmed = null;
+  $('tableWrap').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-a]'); if (!b) return;
+    const i = +b.closest('tr').dataset.i;
+    const a = b.dataset.a;
+    if (a === 'remove' && removeArmed !== i){ removeArmed = i; b.textContent = 'Remove?'; b.classList.add('danger'); return; }
+    mutate((st, now) => {
+      const s = st.students[i]; if (!s) return;
+      if (a === 'rest'){
+        if (SP.onBreak(s)){ const br = s.breaks[s.breaks.length-1]; br.end = now; return who(s) + '  rest break ended (' + SP.mmss(br.end - br.start) + ')'; }
+        s.breaks.push({ start: now, end: null }); return who(s) + '  rest break started';
+      }
+      if (a === 'plus'){ s.adj += 1; return who(s) + '  +1 min (adjustment now ' + s.adj + ')'; }
+      if (a === 'minus'){ s.adj -= 1; return who(s) + '  −1 min (adjustment now ' + s.adj + ')'; }
+      if (a === 'finish'){
+        if (s.finishedAt){ s.finishedAt = null; return who(s) + '  finish undone'; }
+        if (SP.onBreak(s)) s.breaks[s.breaks.length-1].end = now;
+        s.finishedAt = now; return who(s) + '  marked finished';
+      }
+      if (a === 'remove'){ st.students.splice(i, 1); removeArmed = null; return who(s) + '  removed from list'; }
+    });
+  });
+
+  // ---------- import ----------
+  function doImport(text){
+    const { students, errors } = SP.importCSV(text);
+    if (!students.length){ message(errors.join('\n') || 'No students found.', false); return; }
+    let skipped = [];
+    mutate(st => {
+      const mode = document.querySelector('input[name=mode]:checked').value;
+      if (!st.students.length || mode === 'replace'){ st.students = students; }
+      else {
+        const have = new Set(st.students.map(s => s.id));
+        for (const s of students){ if (have.has(s.id)) skipped.push(s.id); else st.students.push(s); }
+      }
+      return 'imported ' + (students.length - skipped.length) + ' student(s) from CSV';
+    });
+    const notes = [...errors, ...skipped.map(id => `ID ${id} is already in the list, skipped.`)];
+    message(`Imported ${students.length - skipped.length} student(s).` + (notes.length ? '\n' + notes.join('\n') : ''), !notes.length);
+    $('pastePanel').classList.remove('open');
+  }
+  $('file').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => doImport(r.result);
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  $('btnPaste').onclick = () => { $('pastePanel').classList.toggle('open'); $('addPanel').classList.remove('open'); };
+  $('btnImportText').onclick = () => doImport($('csvText').value);
+  $('btnAdd').onclick = () => { $('addPanel').classList.toggle('open'); $('pastePanel').classList.remove('open'); $('aId').focus(); };
+  $('btnAddSave').onclick = () => {
+    // Re-use the CSV validation so manual entries follow the same rules.
+    const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const line = ['id,name,display,extra_reading,extra_writing,rest',
+      [$('aId').value, $('aName').value, $('aDisp').value, $('aXr').value, $('aXw').value, $('aRest').value].map(q).join(',')].join('\n');
+    const { students, errors } = SP.importCSV(line);
+    if (!students.length){ message(errors.join('\n').replace(/Line 2: /g, ''), false); return; }
+    const st0 = SP.loadState();
+    if (st0.students.some(s => s.id === students[0].id)){ message('ID ' + students[0].id + ' is already in the list.', false); return; }
+    mutate(st => { st.students.push(students[0]); return who(students[0]) + '  added'; });
+    message('Added ' + who(students[0]) + '.', true);
+    ['aId','aName','aDisp'].forEach(id => $(id).value = ''); ['aXr','aXw','aRest'].forEach(id => $(id).value = 0);
+    $('aId').focus();
+  };
+  $('btnTemplate').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([SP.TEMPLATE], { type:'text/csv' }));
+    a.download = 'special-provisions-template.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  let clearArmed = false;
+  $('btnClear').onclick = () => {
+    if (!clearArmed){ clearArmed = true; $('btnClear').textContent = 'Click again to clear'; setTimeout(()=>{ clearArmed = false; $('btnClear').textContent = 'Clear all students'; }, 4000); return; }
+    clearArmed = false; $('btnClear').textContent = 'Clear all students';
+    mutate(st => { const n = st.students.length; st.students = []; return 'cleared ' + n + ' student(s)'; });
+    message('Student list cleared.', true);
+  };
+
+  // ---------- log ----------
+  function openLog(){
+    const st = SP.loadState();
+    $('logList').textContent = st.log.length ? st.log.join('\n') : 'Nothing logged yet.';
+    $('log').classList.add('open');
+  }
+  $('btnLog').onclick = openLog;
+  $('btnCloseLog').onclick = () => $('log').classList.remove('open');
+  $('btnClearLog').onclick = () => { const st = SP.loadState(); st.log = []; SP.saveState(st); openLog(); };
+  $('btnCopyLog').onclick = () => {
+    const st = SP.loadState();
+    const now = Date.now();
+    const summary = st.students.map(s => { const c = SP.compute(cfg, s, now);
+      return `${who(s)}  finish ${SP.hm(c.finish)}  rest ${SP.mmss(c.restUsed)}${s.rest ? ' of ' + s.rest + ':00' : ''}${s.adj ? '  adj ' + s.adj : ''}`; });
+    const txt = (cfg.title || 'Special Provisions') + '\n\nSummary\n' + summary.join('\n') + '\n\nLog\n' + st.log.join('\n');
+    try { navigator.clipboard.writeText(txt).then(() => { $('btnCopyLog').textContent = 'Copied'; setTimeout(() => $('btnCopyLog').textContent = 'Copy', 1500); }); } catch(e){}
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('log').classList.remove('open'); });
+
+  // ---------- header ----------
+  function header(){
+    cfg = SP.loadCfg() || cfg;
+    const {s,w,e} = SP.baseTimes(cfg);
+    $('title').textContent = cfg.title || 'Special Provisions';
+    $('base').textContent = 'Standard times: ' + (cfg.read > 0 ? 'reading ' + SP.hm(s) + '–' + SP.hm(w) + ' · ' : '') + 'writing ' + SP.hm(w) + '–' + SP.hm(e) + (cfg.warn ? ' · warning at ' + cfg.warn + ' min' : '');
+    document.body.classList.toggle('light', !!cfg.light);
+  }
+  window.addEventListener('storage', e => { if (e.key === 'spcfg') { header(); tick(); } });
+
+  header(); build();
+  setInterval(tick, 500);
+})();
+</script>
+</body>
+</html>

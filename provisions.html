@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Clock — Special Provisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Special provisions room, projector view: each student's own finish time. Controlled from hud.html. */
+  :root{
+    --bg:#0b0e13; --panel:#141922; --line:#232a36; --ink:#e8edf5; --mute:#7b8698;
+    --warn:#ffb020; --rest:#4cc3ff; --field:#0d1117; --btn:#1f2633; --card:#11161e;
+  }
+  body.light{
+    --bg:#f5f6f8; --panel:#ffffff; --line:#d5dae2; --ink:#10151d; --mute:#5f6b7c;
+    --warn:#b45309; --rest:#0369a1; --field:#f5f6f8; --btn:#e9edf2; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  body{transition:background .3s ease,color .3s ease}
+  .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding:2.5vh 3vw;gap:2vh}
+  header{display:flex;justify-content:space-between;align-items:center;gap:2vw}
+  #examTitle{font-size:clamp(18px,2.8vw,48px);font-weight:800}
+  #base{font-size:clamp(11px,1.2vw,20px);color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:.4vh}
+  #clock{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:clamp(40px,min(8vw,13vh),150px);line-height:1;font-variant-numeric:tabular-nums}
+
+  #grid{display:grid;gap:1.6vh 1.4vw;align-content:center;grid-template-columns:repeat(var(--cols,3),1fr)}
+  .card{background:var(--card);border:3px solid var(--line);border-radius:18px;padding:1.6vh 1.4vw;display:flex;flex-direction:column;gap:.6vh;min-width:0;transition:all .3s ease}
+  .card .who{font-weight:800;font-size:var(--who,32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .st{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:var(--st,16px);color:var(--mute)}
+  .card .fl{font-size:var(--st,16px);color:var(--mute);letter-spacing:.14em;text-transform:uppercase;margin-top:.4vh}
+  .card .fin{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:var(--fin,64px);line-height:1;font-variant-numeric:tabular-nums}
+
+  /* States differ by fill, border style and words as well as colour. */
+  .card.pending{opacity:.75}
+  .card.reading{border-style:dashed;border-color:var(--ink)}
+  .card.reading .st{color:var(--ink)}
+  .card.writing{border-color:var(--ink)}
+  .card.writing .st{color:var(--ink)}
+  .card.rest{border-color:var(--rest);border-width:4px;background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(76,195,255,.08) 14px 28px),var(--card)}
+  .card.rest .st{color:var(--rest)}
+  .card.warning{background:radial-gradient(ellipse at 50% 40%,#ffd36a,#f59e0b 80%);border-color:#ffd36a;color:#2a1600}
+  .card.warning .st,.card.warning .fl{color:#2a1600}
+  .card.done{opacity:.4}
+  .card.done .fin{text-decoration:line-through;text-decoration-thickness:4px}
+
+  #empty{grid-column:1/-1;text-align:center;color:var(--mute);font-size:clamp(16px,2vw,30px);line-height:1.5}
+
+  footer{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--mute);font-size:clamp(10px,1vw,14px)}
+  footer button{background:none;border:1px solid var(--line);color:var(--mute);padding:.5em .9em;border-radius:8px;font:inherit;cursor:pointer}
+  footer button:hover{color:var(--ink);border-color:var(--mute)}
+  footer a{color:var(--mute)}
+  .keys kbd{font-family:'JetBrains Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:0 .35em;margin:0 .15em}
+  body.clean footer{opacity:0;transition:opacity .4s}
+  body.clean footer:hover{opacity:1}
+  body.is-full footer{display:none}
+  body.nocursor, body.nocursor *{cursor:none !important}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;width:min(540px,92vw);max-height:86vh;overflow:auto}
+  .mcard h2{font-size:18px;margin-bottom:14px}
+  .mcard label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  .mcard input{width:100%;background:var(--field);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 10px;font:inherit}
+  .mcard label.switch{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:14px}
+  .mcard .switch input{width:auto;transform:scale(1.4);accent-color:var(--ink)}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .startrow{display:flex;gap:8px}
+  .startrow input{flex:1}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .actions button,.startrow button,.hudbtn{background:var(--btn);border:1px solid var(--line);color:var(--ink);padding:9px 14px;border-radius:8px;font:inherit;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}
+  .actions button.primary,.hudbtn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  .hint{font-size:12px;color:var(--mute);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body class="clean">
+<div class="wrap">
+  <header>
+    <div>
+      <div id="examTitle">Special Provisions</div>
+      <div id="base"></div>
+    </div>
+    <div id="clock">--:--:--</div>
+  </header>
+
+  <section id="grid"></section>
+
+  <footer>
+    <div class="keys"><kbd>S</kbd> setup · <kbd>H</kbd> open control HUD · <kbd>⌘F</kbd>/<kbd>Ctrl+F</kbd> full screen · <a href="./">Exam room</a> · <a href="small.html">Small room</a></div>
+    <div>
+      <button id="btnSetup">Assessment Setup</button>
+      <button id="btnFull" title="Cmd+F / Ctrl+F">Full screen</button>
+    </div>
+  </footer>
+</div>
+
+<div class="modal" id="setup">
+  <div class="mcard">
+    <h2>Assessment Setup</h2>
+    <label>Assessment name</label>
+    <input id="inTitle" placeholder="Unit 4 Psychology Exam — Special Provisions">
+    <label>Start time (standard reading time starts)</label>
+    <div class="startrow">
+      <input id="inStart" type="time">
+      <button id="btnNow" type="button">Start now</button>
+    </div>
+    <div class="row">
+      <div><label>Reading (min)</label><input id="inRead" type="number" min="0" step="1"></div>
+      <div><label>Writing (min)</label><input id="inWrite" type="number" min="1" step="1"></div>
+      <div><label>Warning (min)</label><input id="inWarn" type="number" min="0" step="1"></div>
+    </div>
+    <p class="hint">These are the standard times. Each student's extra time and rest breaks are added on top in the control HUD.</p>
+    <label class="switch">Light mode <input id="inLight" type="checkbox"></label>
+
+    <h2 style="margin-top:22px">Control HUD</h2>
+    <p class="hint">Opens the supervisor's control screen in a new window: import the student list, start and end rest breaks, and adjust times. Keep it on the laptop screen, not the projector (use “Extend” display mode). Student names are shown only there.</p>
+    <div class="actions" style="justify-content:flex-start">
+      <a class="hudbtn primary" id="btnHud" href="hud.html" target="examclock-hud">Open control HUD</a>
+    </div>
+
+    <div class="actions">
+      <button id="btnCancel">Cancel</button>
+      <button class="primary" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/sp-core.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const saved = SP.loadCfg();
+  let cfg = saved || SP.defaultCfg();
+  if (!saved) SP.saveCfg(cfg);   // so the HUD sees the same times straight away
+
+  function sizeFor(n){
+    // Fewer students = bigger cards. Columns chosen to fit up to ~16 on one screen.
+    const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4;
+    const rows = Math.max(1, Math.ceil(n / cols));
+    const g = $('grid').style;
+    g.setProperty('--cols', cols);
+    const k = Math.min(1.25 / cols, 0.95 / rows);   // fraction of the screen per card
+    g.setProperty('--who', `clamp(16px, ${3.2*k*cols/1.25}vw, 72px)`);
+    g.setProperty('--st',  `clamp(11px, ${1.4*k*cols/1.25}vw, 26px)`);
+    g.setProperty('--fin', `clamp(28px, min(${7*k*cols/1.25}vw, ${16*k}vh), 150px)`);
+  }
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function statusText(c){
+    switch (c.phase){
+      case 'pending': return 'Not started';
+      case 'reading': return 'Reading until ' + SP.hm(c.readEnd);
+      case 'writing': return 'Writing';
+      case 'warning': { const m = Math.max(1, Math.ceil(c.leftMs / SP.MIN)); return m + (m === 1 ? ' minute left' : ' minutes left'); }
+      case 'rest':    return 'Rest break since ' + SP.hm(c.breakSince);
+      case 'done':    return 'Finished — pens down';
+    }
+    return '';
+  }
+
+  let lastHTML = '';
+  function tick(){
+    const now = Date.now();
+    $('clock').textContent = SP.hms(new Date(now));
+    cfg = SP.loadCfg() || cfg;                       // the HUD may have changed nothing here, but stay in step
+    const st = SP.loadState();
+    const n = st.students.length;
+    sizeFor(n);
+    let html;
+    if (!n){
+      html = '<div id="empty">No students yet.<br>Open the control HUD (press <b>H</b>) and import the student list.</div>';
+    } else {
+      html = st.students.map(s => {
+        const c = SP.compute(cfg, s, now);
+        return `<div class="card ${c.phase}"><div class="who">${esc(s.display || s.id)}</div>` +
+               `<div class="st">${esc(statusText(c))}</div>` +
+               `<div class="fl">${c.phase === 'done' ? 'Finished' : 'Finishes'}</div>` +
+               `<div class="fin">${SP.hm(c.finish)}</div></div>`;
+      }).join('');
+    }
+    if (html !== lastHTML){ $('grid').innerHTML = html; lastHTML = html; }
+  }
+
+  function render(){
+    const {s,w,e} = SP.baseTimes(cfg);
+    $('examTitle').textContent = cfg.title || 'Special Provisions';
+    $('base').textContent = 'Standard: ' + (cfg.read > 0 ? 'reading ' + SP.hm(s) + '–' + SP.hm(w) + ' · ' : '') + 'writing ' + SP.hm(w) + '–' + SP.hm(e);
+    document.body.classList.toggle('light', !!cfg.light);
+    lastHTML = ''; tick();
+  }
+
+  // ---- setup ----
+  function openSetup(){
+    $('inTitle').value = cfg.title; $('inStart').value = cfg.start;
+    $('inRead').value = cfg.read; $('inWrite').value = cfg.write; $('inWarn').value = (cfg.warn ?? 10);
+    $('inLight').checked = !!cfg.light;
+    $('setup').classList.add('open');
+  }
+  const closeSetup = () => $('setup').classList.remove('open');
+  function save(){
+    cfg = {
+      title: $('inTitle').value.trim() || 'Special Provisions',
+      start: $('inStart').value || SP.nextFive(),
+      read:  Math.max(0, parseInt($('inRead').value)  || 0),
+      write: Math.max(1, parseInt($('inWrite').value) || 90),
+      warn:  Math.max(0, parseInt($('inWarn').value)  || 0),
+      light: $('inLight').checked
+    };
+    SP.saveCfg(cfg); closeSetup(); render();
+  }
+  $('btnSetup').onclick = openSetup;
+  $('btnCancel').onclick = closeSetup;
+  $('btnSave').onclick = save;
+  $('btnNow').onclick = () => { $('inStart').value = SP.hm(new Date()); };
+  const openHud = () => { try { window.open('hud.html', 'examclock-hud'); } catch(e){} };
+
+  // ---- full screen ----
+  function toggleFullscreen(){
+    try{
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen({ navigationUI:'hide' }).catch(()=>{});
+      else document.exitFullscreen().catch(()=>{});
+    }catch(e){}
+  }
+  $('btnFull').onclick = toggleFullscreen;
+  let cursorTimer = null;
+  function wakeCursor(){
+    document.body.classList.remove('nocursor');
+    clearTimeout(cursorTimer);
+    if (document.fullscreenElement) cursorTimer = setTimeout(()=>document.body.classList.add('nocursor'), 2000);
+  }
+  document.addEventListener('mousemove', wakeCursor);
+  document.addEventListener('fullscreenchange', ()=>{
+    document.body.classList.toggle('is-full', !!document.fullscreenElement);
+    $('btnFull').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+    wakeCursor();
+  });
+
+  document.addEventListener('keydown', ev=>{
+    if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'f'){ ev.preventDefault(); toggleFullscreen(); return; }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === 'Escape'){ closeSetup(); return; }
+    if (ev.key === 'Enter' && $('setup').classList.contains('open')){ ev.preventDefault(); save(); return; }
+    if (ev.target.tagName === 'INPUT') return;
+    const k = ev.key.toLowerCase();
+    if (k === 's') openSetup();
+    else if (k === 'h') openHud();
+  });
+
+  // Settings changed in another window (e.g. the HUD) → redraw.
+  window.addEventListener('storage', e => { if (e.key === 'spcfg') { cfg = SP.loadCfg() || cfg; render(); } });
+
+  render();
+  setInterval(tick, 500);
+  if (!saved) openSetup();
+})();
+</script>
+</body>
+</html>
