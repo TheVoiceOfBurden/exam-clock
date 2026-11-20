@@ -20,6 +20,7 @@ Live site: `https://thevoiceofburden.github.io/exam-clock/`
 | `R` | Reset both to vacant |
 | `S` | Exam setup (title, times, warning, light mode, phone remote) |
 | `L` | Toilet break log (copyable) |
+| `Cmd+F` / `Ctrl+F` | Borderless full screen on/off (`Esc` also exits) |
 
 **Starting the phone remote:** press **S** → **Start phone remote**. Staff scan the QR code. Keep the setup screen off the projector while you do this. Press **End remote** after the exam, and start a new one for each exam.
 

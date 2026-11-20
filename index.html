@@ -91,6 +91,8 @@
   .keys kbd{font-family:'JetBrains Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:0 .35em;margin:0 .15em}
   body.clean footer{opacity:0;transition:opacity .4s}
   body.clean footer:hover{opacity:1}
+  body.is-full footer{display:none}
+  body.nocursor, body.nocursor *{cursor:none !important}
 
   /* panels */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:10}
@@ -145,11 +147,11 @@
   </section>
 
   <footer>
-    <div class="keys"><span id="roomBadge"></span> Toggle: <kbd>M</kbd>/<kbd>1</kbd> male · <kbd>F</kbd>/<kbd>2</kbd> female · <kbd>R</kbd> reset both · <kbd>L</kbd> log · <kbd>S</kbd> setup</div>
+    <div class="keys"><span id="roomBadge"></span> Toggle: <kbd>M</kbd>/<kbd>1</kbd> male · <kbd>F</kbd>/<kbd>2</kbd> female · <kbd>R</kbd> reset both · <kbd>L</kbd> log · <kbd>S</kbd> setup · <kbd>⌘F</kbd>/<kbd>Ctrl+F</kbd> full screen</div>
     <div>
       <button id="btnSetup">Exam setup</button>
       <button id="btnLog">Log</button>
-      <button id="btnFull">Full screen</button>
+      <button id="btnFull" title="Cmd+F / Ctrl+F">Full screen</button>
     </div>
   </footer>
 </div>
@@ -315,6 +317,13 @@
   signs.F.el.addEventListener('click', ()=>toggle('F'));
 
   document.addEventListener('keydown', ev=>{
+    // Cmd+F (Mac) / Ctrl+F (Windows): toggle borderless full screen instead of the browser's Find.
+    if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'f') {
+      ev.preventDefault();
+      if (!false) toggleFullscreen();
+      return;
+    }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;   // leave other shortcuts to the browser
     if (ev.target.tagName === 'INPUT') return;
     const k = ev.key.toLowerCase();
     if (k==='m' || k==='1') toggle('M');
@@ -360,12 +369,26 @@
     try{ navigator.clipboard.writeText(txt).then(()=>{$('btnCopyLog').textContent='Copied';setTimeout(()=>$('btnCopyLog').textContent='Copy',1500);}).catch(()=>{}); }catch(e){}
   };
 
-  $('btnFull').onclick = ()=>{
+  function toggleFullscreen(){
     try{
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(()=>{});
       else document.exitFullscreen().catch(()=>{});
     }catch(e){}
-  };
+  }
+  $('btnFull').onclick = toggleFullscreen;
+  // In full screen, hide the mouse pointer after 2 seconds without movement.
+  let cursorTimer = null;
+  function wakeCursor(){
+    document.body.classList.remove('nocursor');
+    clearTimeout(cursorTimer);
+    if (document.fullscreenElement) cursorTimer = setTimeout(()=>document.body.classList.add('nocursor'), 2000);
+  }
+  document.addEventListener('mousemove', wakeCursor);
+  document.addEventListener('fullscreenchange', ()=>{
+    document.body.classList.toggle('is-full', !!document.fullscreenElement);
+    $('btnFull').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+    wakeCursor();
+  });
 
   paint('M'); paint('F'); applyTheme(); renderHeader(); tick();
   setInterval(tick, 250);
