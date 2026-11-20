@@ -51,6 +51,8 @@
   footer button{background:none;border:1px solid var(--line);color:var(--mute);padding:.5em .9em;border-radius:8px;font:inherit;cursor:pointer}
   footer button:hover{color:var(--ink);border-color:var(--mute)}
   footer a{color:var(--mute)}
+  footer a.hudlink{border:1px solid var(--line);padding:.5em .9em;border-radius:8px;text-decoration:none;margin-right:6px}
+  footer a.hudlink:hover{color:var(--ink);border-color:var(--mute)}
   .keys kbd{font-family:'JetBrains Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:0 .35em;margin:0 .15em}
   body.clean footer{opacity:0;transition:opacity .4s}
   body.clean footer:hover{opacity:1}
@@ -89,6 +91,7 @@
   <footer>
     <div class="keys"><kbd>S</kbd> setup · <kbd>H</kbd> open control HUD · <kbd>⌘F</kbd>/<kbd>Ctrl+F</kbd> full screen · <a href="./">Exam room</a> · <a href="small.html">Small room</a></div>
     <div>
+      <a class="hudlink" href="hud.html" target="examclock-hud" rel="opener">Control HUD ↗</a>
       <button id="btnSetup">Assessment Setup</button>
       <button id="btnFull" title="Cmd+F / Ctrl+F">Full screen</button>
     </div>
@@ -114,9 +117,9 @@
     <label class="switch">Light mode <input id="inLight" type="checkbox"></label>
 
     <h2 style="margin-top:22px">Control HUD</h2>
-    <p class="hint">Opens the supervisor's control screen in a new window: import the student list, start and end rest breaks, and adjust times. Keep it on the laptop screen, not the projector (use “Extend” display mode). Student names are shown only there.</p>
+    <p class="hint">Opens the supervisor's control screen in a new browser tab. Keep this display running on the projector while you use the HUD: import the student list, start and end rest breaks, and adjust times. Student names are shown only on the HUD, so drag its tab onto the laptop screen (display set to “Extend”) so it never appears on the projector.</p>
     <div class="actions" style="justify-content:flex-start">
-      <a class="hudbtn primary" id="btnHud" href="hud.html" target="examclock-hud">Open control HUD</a>
+      <a class="hudbtn primary" id="btnHud" href="hud.html" target="examclock-hud" rel="opener">Open control HUD in a new tab ↗</a>
     </div>
 
     <div class="actions">
@@ -215,6 +218,8 @@
   $('btnSave').onclick = save;
   $('btnNow').onclick = () => { $('inStart').value = SP.hm(new Date()); };
   const openHud = () => { try { window.open('hud.html', 'examclock-hud'); } catch(e){} };
+  window.name = 'examclock-display';   // lets the HUD's link return to this tab instead of opening another
+  $('btnHud').addEventListener('click', () => setTimeout(closeSetup, 0));
 
   // ---- full screen ----
   function toggleFullscreen(){
