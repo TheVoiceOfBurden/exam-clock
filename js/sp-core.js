@@ -39,19 +39,32 @@
     return { s, w, e };
   }
 
+  // ---------- allowances ----------
+  // Extra time and rest breaks are each 10 minutes per 60-minute block of
+  // standard writing time. A part block counts as a whole block (round up):
+  // 90 min writing -> 2 blocks -> 20 min.
+  const PER_BLOCK = 10, BLOCK = 60;
+  const blocks = cfg => Math.ceil(Math.max(0, cfg.write) / BLOCK);
+  const allowance = cfg => blocks(cfg) * PER_BLOCK;
+
   // ---------- students ----------
   function loadState() {
     const st = read(STATE_KEY, null) || {};
-    return { students: Array.isArray(st.students) ? st.students : [], log: Array.isArray(st.log) ? st.log : [], rev: st.rev || 0 };
+    const students = Array.isArray(st.students) ? st.students : [];
+    // Lists saved by the earlier minutes-based version: treat any minutes as "yes".
+    for (const s of students) {
+      if (typeof s.et !== 'boolean') s.et = (s.xw || 0) > 0;
+      if (typeof s.rb !== 'boolean') s.rb = (s.rest || 0) > 0;
+    }
+    return { students, log: Array.isArray(st.log) ? st.log : [], rev: st.rev || 0 };
   }
   function saveState(st) { st.rev = (st.rev || 0) + 1; write(STATE_KEY, st); }
 
   function newStudent(o) {
     return {
       id: String(o.id), name: String(o.name || ''), display: String(o.display || o.id),
-      xr: o.xr || 0,       // extra reading minutes
-      xw: o.xw || 0,       // extra writing minutes
-      rest: o.rest || 0,   // rest-break minutes allowed (0 = none set)
+      et: !!o.et,          // extra time: yes/no (10 min per 60-min block of writing)
+      rb: !!o.rb,          // rest breaks: yes/no (10 min per 60-min block of writing)
       adj: 0,              // manual adjustment in minutes (+/-), e.g. late start or time lost
       breaks: [],          // [{ start: ms, end: ms|null }]
       finishedAt: null     // ms when marked finished early
@@ -80,8 +93,10 @@
   // Everything the screens need to know about one student at time `now` (ms).
   function compute(cfg, st, now) {
     const sMs = startOf(cfg).getTime();
-    const readEnd = extend(sMs + (cfg.read + st.xr) * MIN, st.breaks, now, sMs);
-    const finish = extend(sMs + (cfg.read + st.xr + cfg.write + st.xw + st.adj) * MIN, st.breaks, now, sMs);
+    const extra = st.et ? allowance(cfg) : 0;
+    const restMin = st.rb ? allowance(cfg) : 0;
+    const readEnd = extend(sMs + cfg.read * MIN, st.breaks, now, sMs);
+    const finish = extend(sMs + (cfg.read + cfg.write + extra + st.adj) * MIN, st.breaks, now, sMs);
     let phase;
     if (st.finishedAt) phase = 'done';
     else if (onBreak(st)) phase = 'rest';
@@ -92,8 +107,8 @@
     const used = restUsedMs(st, now);
     return {
       phase, readEnd: new Date(readEnd), finish: new Date(st.finishedAt || finish),
-      leftMs: finish - now, restUsed: used, restAllowed: st.rest * MIN,
-      restOver: st.rest > 0 && used > st.rest * MIN,
+      leftMs: finish - now, extra, restMin, restUsed: used, restAllowed: restMin * MIN,
+      restOver: used > restMin * MIN,
       breakSince: onBreak(st) ? new Date(st.breaks[st.breaks.length - 1].start) : null
     };
   }
@@ -104,9 +119,8 @@
     id: ['id', 'studentid', 'candidate', 'candidatenumber', 'number'],
     name: ['name', 'fullname', 'student', 'studentname'],
     display: ['display', 'label', 'initials', 'projector'],
-    xr: ['extrareading', 'extrareadingminutes', 'xr', 'reading'],
-    xw: ['extrawriting', 'extrawritingminutes', 'extratime', 'extra', 'xw', 'writing'],
-    rest: ['rest', 'restminutes', 'restbreaks', 'restbreakminutes']
+    et: ['extratime', 'extendedtime', 'extra', 'et'],
+    rb: ['restbreaks', 'restbreak', 'rest', 'rb']
   };
 
   function parseCSV(text) {
@@ -138,11 +152,13 @@
     if (col.id < 0) return { students, errors: ['No "id" column found. The first row must be headings, e.g. id,name,display,extra_reading,extra_writing,rest'] };
 
     const seen = new Set();
-    const num = (v, line, field) => {
-      if (v == null || String(v).trim() === '') return 0;
-      const n = Number(String(v).trim());
-      if (!Number.isInteger(n) || n < 0 || n > 600) { errors.push(`Line ${line}: ${field} "${v}" must be a whole number of minutes from 0 to 600.`); return null; }
-      return n;
+    // Yes/no columns: blank counts as no.
+    const YES = ['yes', 'y', 'true', '1', 'x'], NO = ['no', 'n', 'false', '0', ''];
+    const bool = (v, line, field) => {
+      const t = String(v ?? '').trim().toLowerCase();
+      if (YES.includes(t)) return true;
+      if (NO.includes(t)) return false;
+      errors.push(`Line ${line}: ${field} "${v}" must be yes or no.`); return null;
     };
     rows.slice(1).forEach((r, i) => {
       const line = i + 2;
@@ -151,20 +167,21 @@
       if (!id) { errors.push(`Line ${line}: missing id, row skipped.`); return; }
       if (id.length > 40) { errors.push(`Line ${line}: id is longer than 40 characters, row skipped.`); return; }
       if (seen.has(id)) { errors.push(`Line ${line}: duplicate id "${id}", row skipped.`); return; }
-      const xr = num(get('xr'), line, 'extra reading'), xw = num(get('xw'), line, 'extra writing'), rest = num(get('rest'), line, 'rest');
-      if (xr == null || xw == null || rest == null) return;
+      const et = bool(get('et'), line, 'extra time'), rb = bool(get('rb'), line, 'rest breaks');
+      if (et == null || rb == null) return;
       seen.add(id);
-      students.push(newStudent({ id, name: get('name').slice(0, 80), display: (get('display') || id).slice(0, 20), xr, xw, rest }));
+      students.push(newStudent({ id, name: get('name').slice(0, 80), display: (get('display') || id).slice(0, 20), et, rb }));
     });
     return { students, errors };
   }
 
-  const TEMPLATE = 'id,name,display,extra_reading,extra_writing,rest\n' +
-    '1001,Example Student,ES,5,20,10\n' +
-    '1002,Another Student,AS,0,10,0\n';
+  const TEMPLATE = 'id,name,display,extra_time,rest_breaks\n' +
+    '1001,Example Student,ES,yes,yes\n' +
+    '1002,Another Student,AS,yes,no\n' +
+    '1003,Third Student,TS,no,yes\n';
 
   window.SP = {
-    MIN, loadCfg, saveCfg, defaultCfg, baseTimes, loadState, saveState, newStudent,
+    MIN, PER_BLOCK, BLOCK, blocks, allowance, loadCfg, saveCfg, defaultCfg, baseTimes, loadState, saveState, newStudent,
     onBreak, compute, importCSV, TEMPLATE, hm, hms, mmss, nextFive
   };
 })();

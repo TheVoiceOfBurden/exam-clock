@@ -1,3 +1,4 @@
-id,name,display,extra_reading,extra_writing,rest
-1001,Example Student,ES,5,20,10
-1002,Another Student,AS,0,10,0
+id,name,display,extra_time,rest_breaks
+1001,Example Student,ES,yes,yes
+1002,Another Student,AS,yes,no
+1003,Third Student,TS,no,yes

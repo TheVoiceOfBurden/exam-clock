@@ -37,8 +37,10 @@
   .panel h3{font-size:15px;margin-bottom:8px}
   textarea,input.f{width:100%;background:var(--field);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit}
   textarea{font-family:'JetBrains Mono',monospace;font-size:13px;min-height:120px}
-  .grid6{display:grid;grid-template-columns:1fr 2fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end}
+  .grid6{display:grid;grid-template-columns:1fr 2fr 1fr auto auto auto;gap:8px;align-items:end}
   .grid6 label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
+  .chk{display:flex!important;align-items:center;gap:6px;height:38px;font-size:14px!important;color:var(--ink)!important}
+  .chk input{transform:scale(1.3);accent-color:var(--ink)}
   .hint{font-size:12px;color:var(--mute);line-height:1.5}
   #msg{font-size:13px;line-height:1.6;white-space:pre-wrap;display:none;border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
   #msg.ok{display:block;border-color:var(--rest)}
@@ -96,10 +98,10 @@
 
   <div class="panel" id="pastePanel">
     <h3>Paste CSV</h3>
-    <textarea id="csvText" placeholder="id,name,display,extra_reading,extra_writing,rest&#10;1001,Example Student,ES,5,20,10"></textarea>
+    <textarea id="csvText" placeholder="id,name,display,extra_time,rest_breaks&#10;1001,Example Student,ES,yes,yes"></textarea>
     <div class="bar" style="margin-top:8px">
       <button class="primary" id="btnImportText">Import</button>
-      <span class="hint">Columns: <b>id</b> (required), name, display (shown on the projector), extra_reading, extra_writing, rest — minutes.</span>
+      <span class="hint">Columns: <b>id</b> (required), name, display (shown on the projector), extra_time and rest_breaks (yes / no).</span>
     </div>
   </div>
 
@@ -109,9 +111,8 @@
       <div><label>ID *</label><input class="f" id="aId"></div>
       <div><label>Name (HUD only)</label><input class="f" id="aName"></div>
       <div><label>Projector label</label><input class="f" id="aDisp" placeholder="e.g. initials"></div>
-      <div><label>Extra reading</label><input class="f" id="aXr" type="number" min="0" value="0"></div>
-      <div><label>Extra writing</label><input class="f" id="aXw" type="number" min="0" value="0"></div>
-      <div><label>Rest allowed</label><input class="f" id="aRest" type="number" min="0" value="0"></div>
+      <div><label>Extra time</label><label class="chk"><input id="aEt" type="checkbox"> yes</label></div>
+      <div><label>Rest breaks</label><label class="chk"><input id="aRb" type="checkbox"> yes</label></div>
       <div><button class="primary" id="btnAddSave">Add</button></div>
     </div>
   </div>
@@ -175,7 +176,7 @@
     const rows = st.students.map((s, i) => `
       <tr data-i="${i}">
         <td><div class="nm">${esc(s.name || s.display || s.id)}</div><div class="id">ID ${esc(s.id)} · projector: ${esc(s.display || s.id)}</div></td>
-        <td class="mono">${s.xr ? '+' + s.xr : '—'} / ${s.xw ? '+' + s.xw : '—'}${s.adj ? ` <span class="id">(adj ${s.adj > 0 ? '+' : ''}${s.adj})</span>` : ''}</td>
+        <td class="mono">${s.et ? 'Yes +' + SP.allowance(cfg) : 'No'}${s.adj ? ` <span class="id">(adj ${s.adj > 0 ? '+' : ''}${s.adj})</span>` : ''}</td>
         <td><span class="pill" data-k="pill"></span></td>
         <td class="t" data-k="read"></td>
         <td class="t" data-k="fin"></td>
@@ -189,7 +190,7 @@
         </div></td>
       </tr>`).join('');
     $('tableWrap').innerHTML = `<table>
-      <thead><tr><th>Student</th><th>Extra (min) R / W</th><th>Status</th><th>Reading ends</th><th>Finishes</th><th>Rest used / allowed</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Student</th><th>Extra time</th><th>Status</th><th>Reading ends</th><th>Finishes</th><th>Rest used / allowed</th><th>Actions</th></tr></thead>
       <tbody>${rows}</tbody></table>`;
     tick();
   }
@@ -207,15 +208,17 @@
       pill.className = 'pill ' + c.phase;
       pill.textContent = c.phase === 'warning' ? Math.max(1, Math.ceil(c.leftMs / SP.MIN)) + ' min left' : LABEL[c.phase];
       tr.className = c.phase === 'done' ? 'done' : '';
-      tr.querySelector('[data-k=read]').textContent = (cfg.read + s.xr) > 0 ? SP.hm(c.readEnd) : '—';
+      tr.querySelector('[data-k=read]').textContent = cfg.read > 0 ? SP.hm(c.readEnd) : '—';
       tr.querySelector('[data-k=fin]').textContent = SP.hm(c.finish);
       tr.querySelector('[data-k=rest]').innerHTML =
-        `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rest ? s.rest + ':00' : '—'}${c.restOver ? ' <span class="over">over</span>' : ''}`;
+        s.rb || c.restUsed ? `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rb ? c.restMin + ':00' : 'none'}${c.restOver ? ' <span class="over">over</span>' : ''}` : 'No';
       const rb = tr.querySelector('[data-a=rest]');
       const on = c.phase === 'rest';
       rb.textContent = on ? 'End rest' : 'Start rest';
       rb.className = on ? 'rest-on' : '';
-      rb.disabled = !!s.finishedAt;
+      // Rest breaks only for students who have them (an open break can always be ended).
+      rb.disabled = !!s.finishedAt || (!s.rb && !on);
+      rb.title = s.rb ? '' : 'No rest breaks for this student';
       tr.querySelector('[data-a=finish]').textContent = s.finishedAt ? 'Undo finish' : 'Finish';
     });
   }
@@ -275,15 +278,15 @@
   $('btnAddSave').onclick = () => {
     // Re-use the CSV validation so manual entries follow the same rules.
     const q = v => '"' + String(v).replace(/"/g, '""') + '"';
-    const line = ['id,name,display,extra_reading,extra_writing,rest',
-      [$('aId').value, $('aName').value, $('aDisp').value, $('aXr').value, $('aXw').value, $('aRest').value].map(q).join(',')].join('\n');
+    const line = ['id,name,display,extra_time,rest_breaks',
+      [$('aId').value, $('aName').value, $('aDisp').value, $('aEt').checked ? 'yes' : 'no', $('aRb').checked ? 'yes' : 'no'].map(q).join(',')].join('\n');
     const { students, errors } = SP.importCSV(line);
     if (!students.length){ message(errors.join('\n').replace(/Line 2: /g, ''), false); return; }
     const st0 = SP.loadState();
     if (st0.students.some(s => s.id === students[0].id)){ message('ID ' + students[0].id + ' is already in the list.', false); return; }
     mutate(st => { st.students.push(students[0]); return who(students[0]) + '  added'; });
     message('Added ' + who(students[0]) + '.', true);
-    ['aId','aName','aDisp'].forEach(id => $(id).value = ''); ['aXr','aXw','aRest'].forEach(id => $(id).value = 0);
+    ['aId','aName','aDisp'].forEach(id => $(id).value = ''); ['aEt','aRb'].forEach(id => $(id).checked = false);
     $('aId').focus();
   };
   $('btnTemplate').onclick = () => {
@@ -314,7 +317,7 @@
     const st = SP.loadState();
     const now = Date.now();
     const summary = st.students.map(s => { const c = SP.compute(cfg, s, now);
-      return `${who(s)}  finish ${SP.hm(c.finish)}  rest ${SP.mmss(c.restUsed)}${s.rest ? ' of ' + s.rest + ':00' : ''}${s.adj ? '  adj ' + s.adj : ''}`; });
+      return `${who(s)}  extra time ${s.et ? '+' + c.extra + ' min' : 'no'}  finish ${SP.hm(c.finish)}  rest ${s.rb ? SP.mmss(c.restUsed) + ' of ' + c.restMin + ':00' : 'no'}${s.adj ? '  adj ' + s.adj : ''}`; });
     const txt = (cfg.title || 'Special Provisions') + '\n\nSummary\n' + summary.join('\n') + '\n\nLog\n' + st.log.join('\n');
     try { navigator.clipboard.writeText(txt).then(() => { $('btnCopyLog').textContent = 'Copied'; setTimeout(() => $('btnCopyLog').textContent = 'Copy', 1500); }); } catch(e){}
   };
@@ -325,7 +328,8 @@
     cfg = SP.loadCfg() || cfg;
     const {s,w,e} = SP.baseTimes(cfg);
     $('title').textContent = cfg.title || 'Special Provisions';
-    $('base').textContent = 'Standard times: ' + (cfg.read > 0 ? 'reading ' + SP.hm(s) + '–' + SP.hm(w) + ' · ' : '') + 'writing ' + SP.hm(w) + '–' + SP.hm(e) + (cfg.warn ? ' · warning at ' + cfg.warn + ' min' : '');
+    $('base').textContent = 'Standard times: ' + (cfg.read > 0 ? 'reading ' + SP.hm(s) + '–' + SP.hm(w) + ' · ' : '') + 'writing ' + SP.hm(w) + '–' + SP.hm(e) + (cfg.warn ? ' · warning at ' + cfg.warn + ' min' : '') +
+      ` · extra time / rest breaks: ${SP.allowance(cfg)} min each (${SP.blocks(cfg)} × 60-min block${SP.blocks(cfg) === 1 ? '' : 's'} × 10)`;
     document.body.classList.toggle('light', !!cfg.light);
   }
   window.addEventListener('storage', e => { if (e.key === 'spcfg') { header(); tick(); } });
