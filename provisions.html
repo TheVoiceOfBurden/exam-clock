@@ -38,8 +38,6 @@
   .card.reading .st{color:var(--ink)}
   .card.writing{border-color:var(--ink)}
   .card.writing .st{color:var(--ink)}
-  .card.rest{border-color:var(--rest);border-width:4px;background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(76,195,255,.08) 14px 28px),var(--card)}
-  .card.rest .st{color:var(--rest)}
   .card.warning{background:radial-gradient(ellipse at 50% 40%,#ffd36a,#f59e0b 80%);border-color:#ffd36a;color:#2a1600}
   .card.warning .st,.card.warning .fl{color:#2a1600}
   .card.done{opacity:.4}
@@ -157,10 +155,18 @@
       case 'reading': return 'Reading until ' + SP.hm(c.readEnd);
       case 'writing': return 'Writing';
       case 'warning': { const m = Math.max(1, Math.ceil(c.leftMs / SP.MIN)); return m + (m === 1 ? ' minute left' : ' minutes left'); }
-      case 'rest':    return 'Rest break since ' + SP.hm(c.breakSince);
       case 'done':    return 'Finished — pens down';
     }
     return '';
+  }
+
+  // The projector does not show rest breaks. While a student is on a break their
+  // card stays exactly as it was when the break started (their clock is paused);
+  // when the break ends the new finish time appears.
+  function projectorView(s, now){
+    if (!SP.onBreak(s)) return SP.compute(cfg, s, now);
+    const started = s.breaks[s.breaks.length - 1].start;
+    return SP.compute(cfg, { ...s, breaks: s.breaks.slice(0, -1) }, started);
   }
 
   let lastHTML = '';
@@ -176,7 +182,7 @@
       html = '<div id="empty">No students yet.<br>Open the control HUD (press <b>H</b>) and import the student list.</div>';
     } else {
       html = st.students.map(s => {
-        const c = SP.compute(cfg, s, now);
+        const c = projectorView(s, now);
         return `<div class="card ${c.phase}"><div class="who">${esc(s.display || s.id)}</div>` +
                `<div class="st">${esc(statusText(c))}</div>` +
                `<div class="fl">${c.phase === 'done' ? 'Finished' : 'Finishes'}</div>` +
