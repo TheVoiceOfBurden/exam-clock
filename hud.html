@@ -211,7 +211,7 @@
       tr.querySelector('[data-k=read]').textContent = cfg.read > 0 ? SP.hm(c.readEnd) : '—';
       tr.querySelector('[data-k=fin]').textContent = SP.hm(c.finish);
       tr.querySelector('[data-k=rest]').innerHTML =
-        s.rb || c.restUsed ? `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rb ? c.restMin + ':00' : 'none'}${c.restOver ? ' <span class="over">over</span>' : ''}` : 'No';
+        s.rb || c.restUsed ? `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rb ? SP.mmss(c.restAllowed) : 'none'}${c.restOver ? ' <span class="over">over</span>' : ''}` : 'No';
       const rb = tr.querySelector('[data-a=rest]');
       const on = c.phase === 'rest';
       rb.textContent = on ? 'End rest' : 'Start rest';
@@ -317,7 +317,7 @@
     const st = SP.loadState();
     const now = Date.now();
     const summary = st.students.map(s => { const c = SP.compute(cfg, s, now);
-      return `${who(s)}  extra time ${s.et ? '+' + c.extra + ' min' : 'no'}  finish ${SP.hm(c.finish)}  rest ${s.rb ? SP.mmss(c.restUsed) + ' of ' + c.restMin + ':00' : 'no'}${s.adj ? '  adj ' + s.adj : ''}`; });
+      return `${who(s)}  extra time ${s.et ? '+' + c.extra + ' min' : 'no'}  finish ${SP.hm(c.finish)}  rest ${s.rb ? SP.mmss(c.restUsed) + ' of ' + SP.mmss(c.restAllowed) : 'no'}${s.adj ? '  adj ' + s.adj : ''}`; });
     const txt = (cfg.title || 'Special Provisions') + '\n\nSummary\n' + summary.join('\n') + '\n\nLog\n' + st.log.join('\n');
     try { navigator.clipboard.writeText(txt).then(() => { $('btnCopyLog').textContent = 'Copied'; setTimeout(() => $('btnCopyLog').textContent = 'Copy', 1500); }); } catch(e){}
   };
@@ -329,7 +329,8 @@
     const {s,w,e} = SP.baseTimes(cfg);
     $('title').textContent = cfg.title || 'Special Provisions';
     $('base').textContent = 'Standard times: ' + (cfg.read > 0 ? 'reading ' + SP.hm(s) + '–' + SP.hm(w) + ' · ' : '') + 'writing ' + SP.hm(w) + '–' + SP.hm(e) + (cfg.warn ? ' · warning at ' + cfg.warn + ' min' : '') +
-      ` · extra time / rest breaks: ${SP.allowance(cfg)} min each (${SP.blocks(cfg)} × 60-min block${SP.blocks(cfg) === 1 ? '' : 's'} × 10)`;
+      ` · extra time +${SP.allowance(cfg)} min (${SP.blocks(cfg)} × 60-min block${SP.blocks(cfg) === 1 ? '' : 's'} × 10, rounded up)` +
+      ` · rest breaks ${SP.mmss(SP.restAllowance(cfg) * SP.MIN)} (pro rata)`;
     document.body.classList.toggle('light', !!cfg.light);
   }
   window.addEventListener('storage', e => { if (e.key === 'spcfg') { header(); tick(); } });

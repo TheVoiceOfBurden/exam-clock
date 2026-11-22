@@ -40,12 +40,15 @@
   }
 
   // ---------- allowances ----------
-  // Extra time and rest breaks are each 10 minutes per 60-minute block of
-  // standard writing time. A part block counts as a whole block (round up):
-  // 90 min writing -> 2 blocks -> 20 min.
+  // Both are 10 minutes per 60-minute block of standard writing time.
+  // Extra time: a part block counts as a whole block (round up):
+  //   90 min writing -> 2 blocks -> 20 min.
+  // Rest breaks: pro rata, to the second:
+  //   90 min writing -> 1.5 blocks -> 15 min; 45 min -> 7.5 min (7:30).
   const PER_BLOCK = 10, BLOCK = 60;
   const blocks = cfg => Math.ceil(Math.max(0, cfg.write) / BLOCK);
-  const allowance = cfg => blocks(cfg) * PER_BLOCK;
+  const allowance = cfg => blocks(cfg) * PER_BLOCK;                          // extra time (min)
+  const restAllowance = cfg => Math.max(0, cfg.write) * PER_BLOCK / BLOCK;   // rest breaks (min, may be fractional)
 
   // ---------- students ----------
   function loadState() {
@@ -94,7 +97,7 @@
   function compute(cfg, st, now) {
     const sMs = startOf(cfg).getTime();
     const extra = st.et ? allowance(cfg) : 0;
-    const restMin = st.rb ? allowance(cfg) : 0;
+    const restMin = st.rb ? restAllowance(cfg) : 0;
     const readEnd = extend(sMs + cfg.read * MIN, st.breaks, now, sMs);
     const finish = extend(sMs + (cfg.read + cfg.write + extra + st.adj) * MIN, st.breaks, now, sMs);
     let phase;
@@ -181,7 +184,7 @@
     '1003,Third Student,TS,no,yes\n';
 
   window.SP = {
-    MIN, PER_BLOCK, BLOCK, blocks, allowance, loadCfg, saveCfg, defaultCfg, baseTimes, loadState, saveState, newStudent,
+    MIN, PER_BLOCK, BLOCK, blocks, allowance, restAllowance, loadCfg, saveCfg, defaultCfg, baseTimes, loadState, saveState, newStudent,
     onBreak, compute, importCSV, TEMPLATE, hm, hms, mmss, nextFive
   };
 })();
