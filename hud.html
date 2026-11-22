@@ -209,7 +209,11 @@
       pill.textContent = c.phase === 'warning' ? Math.max(1, Math.ceil(c.leftMs / SP.MIN)) + ' min left' : LABEL[c.phase];
       tr.className = c.phase === 'done' ? 'done' : '';
       tr.querySelector('[data-k=read]').textContent = cfg.read > 0 ? SP.hm(c.readEnd) : '—';
-      tr.querySelector('[data-k=fin]').textContent = SP.hm(c.finish);
+      // Mirror the projector: students on standard time have no card there.
+      let pv = c;
+      if (SP.onBreak(s)) pv = SP.compute(cfg, { ...s, breaks: s.breaks.slice(0, -1) }, s.breaks[s.breaks.length - 1].start);
+      const standard = !s.finishedAt && Math.abs(pv.finish.getTime() - SP.baseTimes(cfg).e.getTime()) < 1000;
+      tr.querySelector('[data-k=fin]').innerHTML = SP.hm(c.finish) + (standard ? ' <span class="id" title="Not shown on the projector">standard</span>' : '');
       tr.querySelector('[data-k=rest]').innerHTML =
         s.rb || c.restUsed ? `<span class="${c.restOver ? 'over' : ''}">${SP.mmss(c.restUsed)}</span> / ${s.rb ? SP.mmss(c.restAllowed) : 'none'}${c.restOver ? ' <span class="over">over</span>' : ''}` : 'No';
       const rb = tr.querySelector('[data-a=rest]');

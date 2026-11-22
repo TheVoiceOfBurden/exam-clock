@@ -175,19 +175,29 @@
     $('clock').textContent = SP.hms(new Date(now));
     cfg = SP.loadCfg() || cfg;                       // the HUD may have changed nothing here, but stay in step
     const st = SP.loadState();
-    const n = st.students.length;
-    sizeFor(n);
+    // Only students whose finish differs from the standard finish get a card:
+    // extra time, a completed rest break, a time adjustment or an early finish.
+    // Everyone else is on standard time, shown in the line under the cards.
+    const stdEnd = SP.baseTimes(cfg).e.getTime();
+    const shown = [], hidden = [];
+    for (const s of st.students){
+      const c = projectorView(s, now);
+      (s.finishedAt || Math.abs(c.finish.getTime() - stdEnd) >= 1000 ? shown : hidden).push({ s, c });
+    }
+    sizeFor(shown.length);
     let html;
-    if (!n){
+    if (!st.students.length){
       html = '<div id="empty">No students yet.<br>Open the control HUD (press <b>H</b>) and import the student list.</div>';
     } else {
-      html = st.students.map(s => {
-        const c = projectorView(s, now);
-        return `<div class="card ${c.phase}"><div class="who">${esc(s.display || s.id)}</div>` +
-               `<div class="st">${esc(statusText(c))}</div>` +
-               `<div class="fl">${c.phase === 'done' ? 'Finished' : 'Finishes'}</div>` +
-               `<div class="fin">${SP.hm(c.finish)}</div></div>`;
-      }).join('');
+      html = shown.map(({ s, c }) =>
+        `<div class="card ${c.phase}"><div class="who">${esc(s.display || s.id)}</div>` +
+        `<div class="st">${esc(statusText(c))}</div>` +
+        `<div class="fl">${c.phase === 'done' ? 'Finished' : 'Finishes'}</div>` +
+        `<div class="fin">${SP.hm(c.finish)}</div></div>`).join('');
+      const std = SP.hm(new Date(stdEnd));
+      html += shown.length
+        ? (hidden.length ? `<div id="empty">All other students finish at the standard time, ${std}.</div>` : '')
+        : `<div id="empty">All students finish at the standard time, ${std}.</div>`;
     }
     if (html !== lastHTML){ $('grid').innerHTML = html; lastHTML = html; }
   }
